@@ -1,0 +1,37 @@
+import subprocess
+import sys
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+TOOLS = {
+    "1": ("Blackbird", os.path.join(BASE_DIR, "blackbird", "blackbird.py")),
+    "2": ("Sherlock", os.path.join(BASE_DIR, "sherlock", "sherlock.py")),
+    "3": ("Maigret", os.path.join(BASE_DIR, "maigret", "maigret.py")),
+}
+
+def run_tool(path):
+    subprocess.run([sys.executable, path])
+
+def main():
+    while True:
+        print("\n=== OSINT Tools Launcher ===")
+        print("1. Blackbird")
+        print("2. Sherlock")
+        print("3. Maigret")
+        print("4. Exit")
+
+        choice = input("Select a tool: ").strip()
+
+        if choice == "4":
+            break
+
+        if choice in TOOLS:
+            name, path = TOOLS[choice]
+            print(f"\nLaunching {name}...\n")
+            run_tool(path)
+        else:
+            print("Invalid choice.")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,173 @@
+import tkinter as tk
+from tkinter import scrolledtext, messagebox
+import subprocess
+import os
+import threading
+import sys
+
+
+# =============================
+# PATH HANDLING
+# =============================
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS
+    EXE_MODE = True
+else:
+    BASE_DIR = os.path.expanduser("~/OSINT_Tools")
+    EXE_MODE = False
+
+
+# Find real Python (not the EXE)
+if EXE_MODE:
+    PYTHON = "python"
+else:
+    PYTHON = sys.executable
+
+
+TOOLS = {
+    "Blackbird": {
+        "path": "blackbird",
+        "script": "blackbird.py"
+    },
+    "Sherlock": {
+        "path": "sherlock",
+        "script": "sherlock.py"
+    },
+    "Maigret": {
+        "path": "maigret",
+        "script": "maigret.py"
+    }
+}
+
+
+class OSINTLauncher:
+
+    def __init__(self, root):
+
+        self.root = root
+        root.title("OSINT Tools Launcher")
+        root.geometry("900x600")
+
+        tk.Label(
+            root,
+            text="OSINT Tools Launcher",
+            font=("Segoe UI", 20, "bold")
+        ).pack(pady=10)
+
+        frame = tk.Frame(root)
+        frame.pack(pady=10)
+
+        tk.Label(frame, text="Username:").grid(row=0, column=0, padx=5)
+
+        self.entry = tk.Entry(frame, width=30, font=("Segoe UI", 12))
+        self.entry.grid(row=0, column=1, padx=5)
+
+        btn_frame = tk.Frame(root)
+        btn_frame.pack(pady=10)
+
+        for tool in TOOLS:
+            tk.Button(
+                btn_frame,
+                text=tool,
+                width=15,
+                height=2,
+                command=lambda t=tool: self.run_tool(t)
+            ).pack(side="left", padx=10)
+
+        self.output = scrolledtext.ScrolledText(
+            root,
+            width=110,
+            height=25,
+            font=("Consolas", 10)
+        )
+        self.output.pack(pady=10)
+
+        tk.Button(
+            root,
+            text="Clear",
+            command=lambda: self.output.delete("1.0", tk.END)
+        ).pack(pady=5)
+
+
+    def run_tool(self, tool):
+
+        username = self.entry.get().strip()
+
+        if not username:
+            messagebox.showwarning("Missing", "Enter a username.")
+            return
+
+        data = TOOLS[tool]
+
+        tool_dir = os.path.join(BASE_DIR, data["path"])
+
+        if not os.path.exists(tool_dir):
+            messagebox.showerror("Missing Tool", tool_dir)
+            return
+
+        self.log(f"\n=== Running {tool} on '{username}' ===\n")
+
+        thread = threading.Thread(
+            target=self.execute,
+            args=(data, tool_dir, username)
+        )
+        thread.start()
+
+
+    def execute(self, data, cwd, username):
+
+        try:
+
+            # Only install deps in DEV mode (not EXE)
+            if not EXE_MODE:
+
+                req = os.path.join(cwd, "requirements.txt")
+
+                if os.path.exists(req):
+
+                    self.log("[+] Installing dependencies...\n")
+
+                    subprocess.run(
+                        [PYTHON, "-m", "pip", "install", "-r", "requirements.txt"],
+                        cwd=cwd
+                    )
+
+            # Run tool
+            cmd = [PYTHON, data["script"], username]
+
+            process = subprocess.Popen(
+                cmd,
+                cwd=cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+
+            for line in process.stdout:
+                self.log(line)
+
+            process.wait()
+
+            self.log("\n=== Finished ===\n")
+
+        except Exception as e:
+            self.log(f"\nERROR: {e}\n")
+
+
+    def log(self, text):
+
+        self.output.after(
+            0,
+            lambda: (
+                self.output.insert(tk.END, text),
+                self.output.see(tk.END)
+            )
+        )
+
+
+if __name__ == "__main__":
+
+    root = tk.Tk()
+    app = OSINTLauncher(root)
+    root.mainloop()

@@ -1,0 +1,7 @@
+cd "C:\Users\Studio Laptop\OSINT_Tools"
+
+pyinstaller --onefile --windowed --icon=icon.ico --name Dirty_Laundry `
+    --add-data "blackbird;blackbird" `
+    --add-data "sherlock;sherlock" `
+    --add-data "maigret;maigret" `
+    dirty_laundry.py
